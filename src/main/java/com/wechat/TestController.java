@@ -2,8 +2,15 @@ package com.wechat;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.wechat.resolvemessage.ProcessWechatMsg;
+import com.wechat.tuling.TulingApiProcess;
+import org.dom4j.Document;
+import org.dom4j.DocumentException;
+import org.dom4j.Element;
+import org.dom4j.io.SAXReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -11,22 +18,31 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Controller
 public class TestController {
     Logger logging = LoggerFactory.getLogger(TestController.class);
+
+    @Autowired
+    ProcessWechatMsg processWechatMsg;
+
+
+
     @RequestMapping(value = "/",produces= MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
     public String index(){
         System.out.printf("iinn");
         return "{\"aa\":\"1231\"}";
     }
-    @RequestMapping(value = "/wechat.do",method = RequestMethod.GET)
+    @RequestMapping(value = "/wechat.do")
     @ResponseBody
-    public String index1(HttpServletRequest request){
+    public String index1(HttpServletRequest request) throws IOException,DocumentException{
         Enumeration parameterNames = request.getParameterNames();
         Map map = new HashMap();
         while(parameterNames.hasMoreElements()){
@@ -34,16 +50,13 @@ public class TestController {
             map.put(paraName,request.getParameter(paraName));
         }
 
-        //map 转 json
-        ObjectMapper mapper = new ObjectMapper();
-        String str = null;
-        try {
-            str  = mapper.writeValueAsString(map);
-        } catch (JsonProcessingException e) {
 
-            e.printStackTrace();
-        }
-        logging.info(str);//打印日志
+        Map hashMap = new HashMap();
+        //处理微信数据
+        InputStream  is = request.getInputStream();
+        hashMap = Util.xmlToMap(is);//将微信消息xml转为map
+
+        String str = processWechatMsg.resolveWechatMsg(hashMap);
 
         return str;
     }

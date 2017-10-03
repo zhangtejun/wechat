@@ -107,23 +107,10 @@ public class AccessTokenServiceImpl extends WebApplicationObjectSupport implemen
             return getAccessTokenForURLtest(accessTokenModel,appID,appSecret);
         }
 
-        String result = null;
         String param = "https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid=" + appID + "&secret=" + appSecret;
 
         /** 发送http get请求 */
-        HttpGet request = new HttpGet(param);
-
-        try {
-            HttpResponse response = HttpClients.createDefault().execute(request);
-            if (response.getStatusLine().getStatusCode() == 200) {
-                result = EntityUtils.toString(response.getEntity());
-            }
-        } catch (ClientProtocolException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
+        String result = Util.getResultFromHttpGet(param);
         JSONObject json = new JSONObject(result);
         Map map = json.toMap();
         if (!Util.isNullOrEmpty(map.get("errmsg"))) {
