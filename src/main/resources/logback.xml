@@ -3,8 +3,8 @@
 
 <configuration debug="false">
 
-	<property name="APP_NAME" value="nbnewper_${weblogic.Name}" />
-	<property name="LOG_HOME" value="/ebank/log/wechat" />
+	<property name="APP_NAME" value="wechat" />
+	<property name="LOG_HOME" value="/home/log/wechat" />
 
 	<contextName>${APP_NAME}</contextName>
 
@@ -39,7 +39,7 @@
 	
 	<root>
 		<level value="debug" />
-		<appender-ref ref="CONSOLE" />
+		<appender-ref ref="FILE" />
 	</root>
 
 </configuration>
