@@ -1,0 +1,180 @@
+@startuml
+note left of ContextLoaderListener #aqua
+ContextLoaderListener类继承ContextLoader
+并实现ServletContextListener
+end note
+-[#0000FF]>ContextLoaderListener: web容器启动
+
+ContextLoaderListener -> ContextLoaderListener: Initialize the root web application context
+note right of ContextLoaderListener #aqua
+执行方法contextInitialized，
+委托给ContextLoader的
+initWebApplicationContext方法执行
+end note
+
+activate ContextLoaderListener #FFBBBB
+ContextLoaderListener -[#0000FF]> ContextLoader:initWebApplicationContext()
+
+note right of ContextLoader #aqua
+执行方法initWebApplicationContext，
+调用<color red>this.context = createWebApplicationContext()</color>实例化context
+1.Class<?> contextClass = determineContextClass(sc);
+2.ConfigurableWebApplicationContext.class.isAssignableFrom(contextClass)
+//用xmlWebApplicationContext的类作为参数，调用它的无参构造，实例一个对象
+3.return (ConfigurableWebApplicationContext) BeanUtils.instantiateClass(contextClass);
+
+end note
+
+note left    of ContextLoader #aqua
+protected Class<?> determineContextClass(ServletContext servletContext) {
+        //从web.xml中获取contextClass，如果没有配置就去contextLoader.properties取，
+        //默认是xmlWebApplicationContext
+		String contextClassName = servletContext.getInitParameter(CONTEXT_CLASS_PARAM);
+		if (contextClassName != null) {
+			try {
+				return ClassUtils.forName(contextClassName, ClassUtils.getDefaultClassLoader());
+			}catch (ClassNotFoundException ex) {
+			}
+		}else {
+			contextClassName = defaultStrategies.getProperty(WebApplicationContext.class.getName());
+			try {
+				return ClassUtils.forName(contextClassName, ContextLoader.class.getClassLoader());
+			}catch (ClassNotFoundException ex) {
+			}
+		}
+	}
+end note
+activate ContextLoader #FFBBBB
+
+ContextLoader -> ContextLoader:Instantiate the root WebApplicationContext\n\n1.this.context = createWebApplicationContext(servletContext);\n2.configureAndRefreshWebApplicationContext(cwac, servletContext);\n
+
+
+ContextLoader -> ContextLoader: cwac--> context\nconfigureAndRefreshWebApplicationContext(cwac, servletContext);\n1.wac.setConfigLocation(configLocationParam)\n2.wac.refresh();
+
+note left of ContextLoaderListener #aqua
+1.设置application context id，优先使用web.xml中的contextId，
+如果没有则使用默认的id。
+2.wac.setConfigLocation(configLocationParam)
+3.wac.refresh();
+end note
+ContextLoader -[#0000FF]> AbstractApplicationContext://refresh()该方法由抽象类AbstractApplicationContext具体实现
+
+AbstractApplicationContext -> AbstractApplicationContext:prepareRefresh()
+
+AbstractApplicationContext -> AbstractApplicationContext:obtainFreshBeanFactory()
+
+AbstractApplicationContext -> AbstractApplicationContext:prepareBeanFactory(beanFactory)
+
+AbstractApplicationContext -> AbstractApplicationContext:postProcessBeanFactory(beanFactory);
+
+AbstractApplicationContext -> AbstractApplicationContext:invokeBeanFactoryPostProcessors(beanFactory);
+
+AbstractApplicationContext -> AbstractApplicationContext:registerBeanPostProcessors(beanFactory);
+
+AbstractApplicationContext -> AbstractApplicationContext:initMessageSource();
+
+AbstractApplicationContext -> AbstractApplicationContext:initApplicationEventMulticaster();
+
+AbstractApplicationContext -> AbstractApplicationContext:onRefresh();
+
+AbstractApplicationContext -> AbstractApplicationContext:finishBeanFactoryInitialization(beanFactory);
+
+AbstractApplicationContext -> AbstractApplicationContext:finishRefresh();
+
+AbstractApplicationContext -> AbstractApplicationContext:resetCommonCaches()
+
+note left of AbstractApplicationContext #aqua
+
+public void refresh() throws BeansException, IllegalStateException {
+		synchronized (this.startupShutdownMonitor) {
+			// Prepare this context for refreshing.
+			//准备上下文刷新，设置容器的启动日期和活动标志以及占位符等。
+			prepareRefresh();
+
+			// Tell the subclass to refresh the internal bean factory.
+			//告诉子类刷新内部bean工厂
+			ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
+
+			// Prepare the bean factory for use in this context.
+			//配置BeanFactory,如上下文的ClassLoader和后处理器等
+			prepareBeanFactory(beanFactory);
+
+			try {
+				// Allows post-processing of the bean factory in context subclasses.
+				//允许在子类上下文中对bean工厂进行后处理。
+				postProcessBeanFactory(beanFactory);
+
+				// Invoke factory processors registered as beans in the context.
+				//在上下文中调用在Bean中注册的工厂处理器。
+				invokeBeanFactoryPostProcessors(beanFactory);
+
+				// Register bean processors that intercept bean creation.
+				//注册处理器bean创建拦截器bean。
+				registerBeanPostProcessors(beanFactory);
+
+				// Initialize message source for this context.
+				//初始化message
+				initMessageSource();
+
+				// Initialize event multicaster for this context.
+				//初始化上下文的事件多播组建
+				initApplicationEventMulticaster();
+
+				// Initialize other special beans in specific context subclasses.
+				//初始化一些特殊的bean
+				onRefresh();
+
+				// Check for listener beans and register them.
+				//注册事件监听器，事件监听Bean统一注册到multicaster里头，ApplicationEvent事件触发后会由multicaster广播
+				registerListeners();
+
+				// Instantiate all remaining (non-lazy-init) singletons.
+'				//非延迟加载的单例Bean实例化
+				finishBeanFactoryInitialization(beanFactory);
+
+				// Last step: publish corresponding event.
+				//最后一步：发布相应的事件。
+				finishRefresh();
+			}
+
+			catch (BeansException ex) {
+				if (logger.isWarnEnabled()) {
+					logger.warn("Exception encountered during context initialization - " +
+							"cancelling refresh attempt: " + ex);
+				}
+
+				// Destroy already created singletons to avoid dangling resources.
+				destroyBeans();
+
+				// Reset 'active' flag.
+				cancelRefresh(ex);
+
+				// Propagate exception to caller.
+				throw ex;
+			}
+
+			finally {
+				// Reset common introspection caches in Spring's core, since we
+				// might not ever need metadata for singleton beans anymore...
+				resetCommonCaches();
+			}
+		}
+	}
+end note
+
+
+AbstractApplicationContext -> AbstractApplicationContext:resetCommonCaches()
+
+
+ContextLoader -> ContextLoader:3.context初始化完成,bind root WebApplicationContext\nservletContext.setAttribute(WebApplicationContext.ROOT_WEB_APPLICATION_CONTEXT_ATTRIBUTE, this.context);\n返回WebApplicationContext context
+
+
+
+ContextLoader -[#0000FF]> ContextLoader:实例化root WebApplicationContext（context） 结束
+deactivate ContextLoader #FFBBBB
+
+ContextLoader -> ContextLoaderListener:initWebApplicationContext()完成
+
+deactivate ContextLoaderListener
+
+@enduml
