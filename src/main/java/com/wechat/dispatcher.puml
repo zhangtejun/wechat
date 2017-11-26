@@ -1,0 +1,55 @@
+@startuml
+actor Foo1
+boundary Foo2
+control Foo3
+entity Foo4
+database Foo5
+collections Foo6
+
+Alice -> Bob: Authentication Request
+Bob --> Alice1: Authentication Response
+
+Alice ->  Bob: Another authentication Request
+Alice <-- Bob: another authentication Response
+@enduml
+//生命线的激活与撤销
+@startuml
+participant FrameworkServlet
+->FrameworkServlet:request
+
+FrameworkServlet -> FrameworkServlet:1.调用doGet/doPost -> processRequest -> doService
+activate FrameworkServlet
+FrameworkServlet -> DispatcherServlet:2.doService -> doDispatch
+deactivate FrameworkServlet
+
+DispatcherServlet -> AbstractHandlerMapping:3.取得处理当前请求的controller,这里也称为hanlder处理器\nHandlerExecutionChain mappedHandler = getHandler(processedRequest);\n这里并不是直接返回controller,而是返回的HandlerExecutionChain请求处理器链对象,该对象封装了handler和interceptors.\nfor (HandlerMapping hm : this.handlerMappings) {\nHandlerExecutionChain handler = hm.getHandler(request);\n}
+activate DispatcherServlet
+
+AbstractHandlerMapping ->AbstractHandlerMapping:4.getHandler(HttpServletRequest request)\n// Look up a handler for the given request, falling back to the default handler if no specific one is found.\nObject handler = getHandlerInternal(request);\n\nprotected HandlerExecutionChain getHandlerExecutionChain(Object handler, HttpServletRequest request)
+activate AbstractHandlerMapping
+
+AbstractHandlerMapping ->DispatcherServlet:5.通过HandlerMapping，将请求映射到处理器（返回一个HandlerExecutionChain，它包括一个处理器、多个HandlerInterceptor拦截器）
+
+deactivate AbstractHandlerMapping
+
+DispatcherServlet -> DispatcherServlet:6.// Determine handler adapter for the current request.\n// 获取处理request的处理器适配器 handler adapter \nHandlerAdapter ha = getHandlerAdapter(mappedHandler.getHandler());
+
+DispatcherServlet -> DispatcherServlet:7.拦截器,对请求进行拦截，做一些预处理\nif (!mappedHandler.applyPreHandle(processedRequest, response)){\n      return;\n    }
+
+DispatcherServlet -> DispatcherServlet:8.// Actually invoke the handler.// 由适配器执行处理器（调用处理器相应功能处理方法）\nModelAndView  mv = ha.handle(processedRequest, response, mappedHandler.getHandler());
+
+DispatcherServlet -> DispatcherServlet:9.Do we need view name translation?\napplyDefaultViewName(request, mv);
+
+DispatcherServlet -> DispatcherServlet:10.执行HandlerInterceptor链,并执行返回处理\nmappedHandler.applyPostHandle(processedRequest, response, mv);
+
+DispatcherServlet -> DispatcherServlet:11.渲染视图(包含对异常的处理)\nprocessDispatchResult(processedRequest, response, mappedHandler, mv, dispatchException);\nrender(mv, request, response);\n// Delegate to the View object for rendering.//委托视图对象进行渲染\nview.render(mv.getModelInternal(), request, response);
+
+DispatcherServlet -> AbstractView:12.public void render(Map<String, ?> model, HttpServletRequest request, HttpServletResponse response) throws Exception {\n       renderMergedOutputModel(mergedModel, getRequestToExpose(request), response);\n}
+
+deactivate DispatcherServlet
+
+activate AbstractView
+
+AbstractView -> InternalResourceView:13.（已InternalResourceView为例）\n        	protected void renderMergedOutputModel(Map<String, Object> model, HttpServletRequest request, HttpServletResponse response) throws Exception {}
+deactivate AbstractView
+@enduml
